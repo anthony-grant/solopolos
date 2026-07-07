@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Solopolos — Slowfeed in conversation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#ECE6D6;
+    --paper-2:#E2DAC6;
+    --ink:#171311;
+    --pink:#FF2E5E;
+    --blue:#243EA8;
+    --faint:rgba(23,19,17,0.55);
+    --hair:rgba(23,19,17,0.18);
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--mono);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+  /* faint halftone wash over the whole page */
+  body::before{
+    content:"";
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:radial-gradient(var(--ink) 0.9px, transparent 1px);
+    background-size:7px 7px;
+    opacity:0.05;
+  }
+  .wrap{position:relative; z-index:1; max-width:860px; margin:0 auto; padding:0 22px 90px;}
+
+  /* ---------- masthead ---------- */
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:18px;
+    padding:26px 0 16px; border-bottom:2px solid var(--ink); flex-wrap:wrap;
+  }
+  .brand{display:flex; flex-direction:column; gap:4px;}
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.28em; text-transform:uppercase;
+    color:var(--blue); font-weight:600;
+  }
+  .wordmark{
+    font-family:"Archivo Black","Arial Black",system-ui,sans-serif; font-weight:400;
+    font-size:clamp(36px,8.5vw,62px); letter-spacing:-0.055em; line-height:0.84;
+    margin:0; text-transform:lowercase;
+  }
+  .wordmark b{font-weight:400; color:var(--pink);}
+  .mast-right{display:flex; align-items:center; gap:14px;}
+  .halfbar{
+    width:120px; height:34px; align-self:center;
+    background-image:radial-gradient(var(--ink) 1.4px, transparent 1.6px);
+    background-size:6px 6px;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 55%,#000);
+    mask-image:linear-gradient(90deg,transparent,#000 55%,#000);
+    display:none;
+  }
+  @media(min-width:620px){.halfbar{display:block;}}
+  .ghostbtn{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase;
+    background:transparent; border:1.5px solid var(--ink); color:var(--ink);
+    padding:9px 13px; cursor:pointer; border-radius:0; font-weight:500;
+    transition:background .15s ease,color .15s ease;
+  }
+  .ghostbtn:hover{background:var(--ink); color:var(--paper);}
+  .ghostbtn:focus-visible{outline:2px solid var(--blue); outline-offset:2px;}
+
+  /* progress rail */
+  .rail{display:flex; gap:5px; padding:14px 0 0;}
+  .rail span{height:5px; flex:1; background:var(--paper-2); border:1px solid var(--hair);}
+  .rail span.done{background:var(--pink); border-color:var(--pink);}
+  .rail span.here{background:var(--ink); border-color:var(--ink);}
+
+  /* ---------- the spread ---------- */
+  .spread{padding:34px 0 0; animation:rise .5s ease both;}
+  @keyframes rise{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+  .meta{display:flex; justify-content:space-between; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  .seg{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--blue); font-weight:600;
+  }
+  .count{font-family:var(--mono); font-size:12px; letter-spacing:0.16em; color:var(--faint);}
+
+  .qrow{display:flex; gap:18px; align-items:flex-start; margin-top:10px;}
+  .qnum{
+    font-family:var(--serif); font-weight:600; font-size:clamp(54px,13vw,96px);
+    line-height:0.82; color:transparent;
+    -webkit-text-stroke:1.4px var(--ink);
+    position:relative; flex:none;
+  }
+  .qnum::after{
+    content:attr(data-n); position:absolute; inset:0;
+    background-image:radial-gradient(var(--pink) 1.5px, transparent 1.7px);
+    background-size:6px 6px;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-fill-color:transparent;
+    opacity:0.9;
+  }
+  .question{
+    font-family:var(--serif); font-weight:500; font-size:clamp(23px,4.4vw,34px);
+    line-height:1.16; letter-spacing:-0.01em; margin:0; padding-top:2px;
+  }
+
+  /* ---------- cassette transport ---------- */
+  .deck{
+    margin:26px 0 8px; border:2px solid var(--ink); background:var(--paper-2);
+    display:flex; align-items:center; gap:16px; padding:14px 16px;
+  }
+  .play{
+    width:46px; height:46px; flex:none; border:2px solid var(--ink); background:var(--paper);
+    border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .15s ease;
+  }
+  .play:hover{background:var(--pink); border-color:var(--pink);}
+  .play:focus-visible{outline:2px solid var(--blue); outline-offset:3px;}
+  .play svg{width:18px; height:18px; fill:var(--ink);}
+  .play:hover svg{fill:var(--paper);}
+  .reels{display:flex; gap:30px; align-items:center; padding:0 4px;}
+  .reel{
+    width:30px; height:30px; border:2px solid var(--ink); border-radius:50%;
+    position:relative; background:var(--paper);
+  }
+  .reel::before{
+    content:""; position:absolute; inset:5px; border-radius:50%;
+    border:2px dashed var(--ink); opacity:0.7;
+  }
+  .reel::after{content:""; position:absolute; inset:11px; border-radius:50%; background:var(--ink);}
+  .deck.spinning .reel{animation:spin 1.6s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .tapeline{flex:1; height:2px; background:var(--ink); position:relative; min-width:24px; opacity:0.5;}
+  .readout{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+    color:var(--faint); white-space:nowrap; margin-left:auto;
+  }
+  .deck.spinning .readout{color:var(--pink);}
+
+  /* ---------- answer ---------- */
+  .ans-label{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-family:var(--mono); font-size:11px; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--faint); margin:22px 0 8px;
+  }
+  textarea{
+    width:100%; min-height:130px; resize:vertical; background:var(--paper-2);
+    border:2px solid var(--ink); color:var(--ink); padding:14px 15px;
+    font-family:var(--mono); font-size:15px; line-height:1.6; border-radius:0;
+  }
+  textarea::placeholder{color:var(--faint);}
+  textarea:focus{outline:none; box-shadow:inset 0 0 0 2px var(--blue);}
+  .ctrls{display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap;}
+  .mic{
+    display:inline-flex; align-items:center; gap:9px; cursor:pointer;
+    background:transparent; border:1.5px solid var(--ink); color:var(--ink);
+    font-family:var(--mono); font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+    padding:9px 13px; font-weight:500; transition:all .15s ease;
+  }
+  .mic:hover{background:var(--ink); color:var(--paper);}
+  .mic:focus-visible{outline:2px solid var(--blue); outline-offset:2px;}
+  .mic .dot{width:9px; height:9px; border-radius:50%; background:var(--pink); flex:none;}
+  .mic.live{background:var(--pink); border-color:var(--pink); color:var(--paper);}
+  .mic.live .dot{background:var(--paper); animation:pulse 1s ease-in-out infinite;}
+  @keyframes pulse{50%{opacity:0.25;}}
+  .hint{font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:0.04em;}
+
+  /* ---------- follow-ups ---------- */
+  .followbtn{
+    margin-top:18px; background:transparent; border:none; cursor:pointer;
+    font-family:var(--mono); font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--blue); font-weight:600; padding:6px 0; display:inline-flex; align-items:center; gap:8px;
+    border-bottom:2px solid var(--blue);
+  }
+  .followbtn:hover{color:var(--pink); border-color:var(--pink);}
+  .followbtn:disabled{color:var(--faint); border-color:var(--hair); cursor:default;}
+  .followbtn:focus-visible{outline:2px solid var(--blue); outline-offset:3px;}
+  .follow{
+    margin:22px 0 0; padding:4px 0 4px 20px; border-left:3px solid var(--pink);
+    animation:rise .4s ease both;
+  }
+  .follow .ftag{
+    font-family:var(--mono); font-size:10px; letter-spacing:0.24em; text-transform:uppercase;
+    color:var(--pink); font-weight:600; margin-bottom:8px;
+  }
+  .follow .fq{
+    font-family:var(--serif); font-style:italic; font-weight:500;
+    font-size:clamp(18px,3vw,23px); line-height:1.2; margin:0 0 6px;
+  }
+  .fplay{
+    background:none; border:none; cursor:pointer; color:var(--blue); padding:0; margin:0 0 10px;
+    font-family:var(--mono); font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .fplay:hover{color:var(--pink);}
+  .fplay svg{width:11px; height:11px; fill:currentColor;}
+  .follow textarea{min-height:96px;}
+
+  .thinking{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.12em; color:var(--faint);
+    margin-top:18px; display:flex; align-items:center; gap:10px;
+  }
+  .thinking .tt{
+    width:60px; height:8px;
+    background-image:radial-gradient(var(--pink) 1.4px, transparent 1.6px);
+    background-size:7px 7px; animation:slide 1s linear infinite;
+  }
+  @keyframes slide{from{background-position:0 0;} to{background-position:7px 0;}}
+
+  /* ---------- footer nav ---------- */
+  .nav{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    margin-top:42px; padding-top:18px; border-top:2px solid var(--ink);
+  }
+  .navbtn{
+    background:transparent; border:none; cursor:pointer; color:var(--ink);
+    font-family:var(--mono); font-size:13px; letter-spacing:0.1em; text-transform:uppercase;
+    font-weight:600; padding:6px 2px; display:inline-flex; align-items:center; gap:8px;
+  }
+  .navbtn:hover{color:var(--pink);}
+  .navbtn:disabled{color:var(--hair); cursor:default;}
+  .navbtn:focus-visible{outline:2px solid var(--blue); outline-offset:3px;}
+  .navmid{font-family:var(--mono); font-size:11px; letter-spacing:0.16em; color:var(--faint); text-align:center;}
+
+  /* ---------- overlays (index + export) ---------- */
+  .scrim{
+    position:fixed; inset:0; z-index:30; background:rgba(23,19,17,0.55);
+    display:none; align-items:flex-start; justify-content:center; padding:40px 18px; overflow:auto;
+  }
+  .scrim.open{display:flex;}
+  .sheet{
+    background:var(--paper); border:2px solid var(--ink); max-width:680px; width:100%;
+    padding:28px 26px 32px; position:relative;
+  }
+  .sheet h2{
+    font-family:var(--serif); font-weight:600; font-size:30px; margin:0 0 4px; letter-spacing:-0.01em;
+  }
+  .sheet .sub{font-family:var(--mono); font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--blue); margin-bottom:20px;}
+  .close{
+    position:absolute; top:18px; right:18px; background:none; border:none; cursor:pointer;
+    font-family:var(--mono); font-size:13px; color:var(--ink); letter-spacing:0.1em;
+  }
+  .close:hover{color:var(--pink);}
+  .idxseg{font-family:var(--mono); font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--blue); font-weight:600; margin:20px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--hair);}
+  .idxseg:first-of-type{margin-top:4px;}
+  .idxq{
+    display:flex; gap:12px; align-items:flex-start; cursor:pointer; padding:9px 0;
+    border:none; background:none; text-align:left; width:100%; color:var(--ink);
+  }
+  .idxq:hover .idxtext{color:var(--pink);}
+  .mark{width:11px; height:11px; flex:none; margin-top:6px; border:1.5px solid var(--ink);}
+  .mark.full{background:var(--pink); border-color:var(--pink);}
+  .idxn{font-family:var(--mono); font-size:12px; color:var(--faint); flex:none; width:22px;}
+  .idxtext{font-family:var(--serif); font-size:17px; font-weight:500; line-height:1.25;}
+
+  .exportbox{
+    width:100%; min-height:260px; background:var(--paper-2); border:2px solid var(--ink);
+    color:var(--ink); font-family:var(--mono); font-size:12px; line-height:1.6; padding:14px; resize:vertical;
+  }
+  .exportbox:focus{outline:none; box-shadow:inset 0 0 0 2px var(--blue);}
+  .exprow{display:flex; gap:12px; margin-top:14px; flex-wrap:wrap;}
+  .solidbtn{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    background:var(--ink); color:var(--paper); border:2px solid var(--ink); padding:11px 16px;
+    cursor:pointer; font-weight:600;
+  }
+  .solidbtn:hover{background:var(--pink); border-color:var(--pink);}
+  .solidbtn:focus-visible{outline:2px solid var(--blue); outline-offset:2px;}
+
+  .vlabel{font-family:var(--mono); font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--faint); margin-bottom:9px;}
+  .voiceselect{
+    width:100%; background:var(--paper-2); border:2px solid var(--ink); color:var(--ink);
+    font-family:var(--mono); font-size:13px; padding:11px 12px; border-radius:0; cursor:pointer;
+  }
+  .voiceselect:focus{outline:none; box-shadow:inset 0 0 0 2px var(--blue);}
+  #rate{width:100%; accent-color:var(--pink);}
+  .ratev{font-family:var(--mono); font-size:11px; color:var(--blue); font-weight:600; margin-top:6px;}
+  .vtip{font-family:var(--mono); font-size:11.5px; color:var(--faint); line-height:1.7; margin:20px 0 0; border-top:1px solid var(--hair); padding-top:16px;}
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper); font-family:var(--mono); font-size:12px;
+    letter-spacing:0.08em; padding:12px 18px; z-index:50; opacity:0;
+    transition:opacity .25s ease, transform .25s ease; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;}
+  }
+  @media(max-width:520px){
+    .qrow{flex-direction:column; gap:6px;}
+    .deck{flex-wrap:wrap;}
+    .reels{order:3;}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <span class="eyebrow">A spoken interview · on Slowfeed</span>
+        <h1 class="wordmark">solo<b>p</b>olos</h1>
+      </div>
+      <div class="mast-right">
+        <div class="halfbar" aria-hidden="true"></div>
+        <button class="ghostbtn" id="voiceBtn">Voice</button>
+        <button class="ghostbtn" id="indexBtn">Index</button>
+        <button class="ghostbtn" id="exportBtn">Export</button>
+      </div>
+    </header>
+
+    <div class="rail" id="rail" aria-hidden="true"></div>
+
+    <main class="spread" id="spread"><!-- rendered --></main>
+
+    <div class="nav">
+      <button class="navbtn" id="prevBtn">← Prev</button>
+      <div class="navmid" id="navMid"></div>
+      <button class="navbtn" id="nextBtn">Next →</button>
+    </div>
+  </div>
+
+  <!-- INDEX -->
+  <div class="scrim" id="indexScrim">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Question index">
+      <button class="close" data-close>Close ✕</button>
+      <h2>The Questions</h2>
+      <div class="sub">Ten questions · tap one to jump</div>
+      <div id="indexList"></div>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="scrim" id="exportScrim">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Export transcript">
+      <button class="close" data-close>Close ✕</button>
+      <h2>Export the Transcript</h2>
+      <div class="sub">Markdown · ready to cut into posts</div>
+      <textarea class="exportbox" id="exportText" readonly></textarea>
+      <div class="exprow">
+        <button class="solidbtn" id="downloadMd">Download .md</button>
+        <button class="solidbtn" id="copyMd">Copy to clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- VOICE -->
+  <div class="scrim" id="voiceScrim">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Voice settings">
+      <button class="close" data-close>Close ✕</button>
+      <h2>Voice</h2>
+      <div class="sub">Pick the best one installed · set the pace</div>
+      <div class="vlabel">Voice</div>
+      <select id="voiceSelect" class="voiceselect"></select>
+      <div class="vlabel" style="margin-top:18px;">Pace</div>
+      <input type="range" id="rate" min="70" max="115" value="95" step="5">
+      <div class="ratev" id="rateVal">0.95×</div>
+      <div class="exprow">
+        <button class="solidbtn" id="previewVoice">Preview voice</button>
+      </div>
+      <p class="vtip">Browser audio uses the voices installed on <i>your</i> device, so quality varies by machine. For a big jump, download an <b>enhanced / premium</b> system voice — on Mac: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices (the “Siri” and “(Enhanced)” voices sound far more human). On iOS it’s Settings → Accessibility → Spoken Content → Voices. New voices show up in this list automatically. For true podcast-grade narration, see the handoff notes on neural TTS.</p>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- content ----------
+  var QUESTIONS = [
+    {seg:"Origins", segNo:"01", text:"For someone who's never seen it — what is Slowfeed, and what does it actually put in someone's hands?"},
+    {seg:"Origins", segNo:"01", text:"The name itself — \u201CSlowfeed\u201D — reads like a quiet argument. What are you pushing back against?"},
+    {seg:"The Hand & The Machine", segNo:"02", text:"Your collage work lives in halftone, torn type, and fragments — deeply tactile. What happens to that physicality when you hand it to a generative system?"},
+    {seg:"The Hand & The Machine", segNo:"02", text:"Where's the line between the system making the interesting decisions and you making them? Who's the author of a Slowfeed zine?"},
+    {seg:"Print in a Feed-Shaped World", segNo:"03", text:"Why print, and why zines specifically, in 2026 — when everything is built to live on a screen?"},
+    {seg:"Print in a Feed-Shaped World", segNo:"03", text:"Physical objects come with friction — paper, cost, shipping, waiting. Is that friction a bug, or is it the entire point?"},
+    {seg:"The Day Job", segNo:"04", text:"By day you help build the feed; by night you make the slow, printed counter-argument to it. How do those two live in the same head?"},
+    {seg:"The Day Job", segNo:"04", text:"For a collage artist, are generative tools and AI a new collaborator — or a threat to the craft?"},
+    {seg:"Process & What's Next", segNo:"05", text:"Walk me through making one. When does it stop being engineering and start being art — or does that line never exist?"},
+    {seg:"Process & What's Next", segNo:"05", text:"Where does Slowfeed go next? What's the version you can already see that doesn't exist yet?"}
+  ];
+
+  // ---------- state ----------
+  var state = {
+    current: 0,
+    answers: QUESTIONS.map(function(){ return ""; }),
+    follows: QUESTIONS.map(function(){ return []; }) // each: {q, a}
+  };
+  var activeField = null;            // textarea currently targeted by the mic
+  var recognizing = false;
+  var recog = null;
+
+  var hasTTS = ("speechSynthesis" in window);
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var hasSR = !!SR;
+
+  // ---------- elements ----------
+  var spread = document.getElementById("spread");
+  var rail = document.getElementById("rail");
+  var navMid = document.getElementById("navMid");
+  var prevBtn = document.getElementById("prevBtn");
+  var nextBtn = document.getElementById("nextBtn");
+  var toastEl = document.getElementById("toast");
+
+  // ---------- helpers ----------
+  function esc(s){ var d=document.createElement("div"); d.textContent=s||""; return d.innerHTML; }
+  function n2(i){ return (i+1<10? "0":"") + (i+1); }
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(function(){ toastEl.classList.remove("show"); }, 2200);
+  }
+
+  // ---------- text to speech ----------
+  var voices = [];
+  var chosenVoice = null;
+  var userPickedVoice = false;
+  var ttsRate = 0.95;
+
+  function scoreVoice(v){
+    var s = 0, n = v.name || "";
+    if(/premium|enhanced|neural|natural|siri/i.test(n)) s += 6;   // downloadable high-quality voices
+    if(/google/i.test(n)) s += 4;                                  // Chrome's cloud voices
+    if(/\b(Samantha|Ava|Allison|Evan|Serena|Daniel|Karen|Moira|Tessa|Alex)\b/i.test(n)) s += 3;
+    if(/en[-_]US/i.test(v.lang)) s += 1;
+    if(v.localService === false) s += 1;
+    return s;
+  }
+  function loadVoices(){
+    if(!hasTTS) return;
+    var all = window.speechSynthesis.getVoices();
+    voices = all.filter(function(v){ return /^en/i.test(v.lang); })
+                .sort(function(a,b){ return scoreVoice(b) - scoreVoice(a); });
+    if(!voices.length) voices = all.slice();
+    if(!userPickedVoice){ chosenVoice = voices[0] || null; }
+    populateVoiceSelect();
+  }
+  function voiceLabel(v){
+    var nice = /premium|enhanced|neural|natural|siri/i.test(v.name) ? " · enhanced" : "";
+    return v.name + " — " + v.lang + nice;
+  }
+  function populateVoiceSelect(){
+    var sel = document.getElementById("voiceSelect");
+    if(!sel) return;
+    sel.innerHTML = "";
+    if(!voices.length){ var z=document.createElement("option"); z.textContent="No voices installed"; sel.appendChild(z); return; }
+    voices.forEach(function(v){
+      var o = document.createElement("option");
+      o.value = v.name + "|" + v.lang;
+      o.textContent = voiceLabel(v);
+      if(chosenVoice && v.name === chosenVoice.name && v.lang === chosenVoice.lang) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+  if(hasTTS){ loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
+
+  function speak(textParam, deckEl){
+    if(!hasTTS){ toast("Audio isn't supported in this browser"); return; }
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(textParam);
+    if(chosenVoice) u.voice = chosenVoice;
+    u.rate = ttsRate; u.pitch = 1.0;
+    if(deckEl){
+      u.onstart = function(){ deckEl.classList.add("spinning"); var r=deckEl.querySelector(".readout"); if(r) r.textContent="▶ Playing"; };
+      var stop = function(){ deckEl.classList.remove("spinning"); var r=deckEl.querySelector(".readout"); if(r) r.textContent="Tape · Q"+n2(state.current); };
+      u.onend = stop; u.onerror = stop;
+    }
+    window.speechSynthesis.speak(u);
+  }
+
+  // ---------- speech to text ----------
+  function setupRecog(){
+    if(!hasSR) return;
+    recog = new SR();
+    recog.continuous = true;
+    recog.interimResults = true;
+    recog.lang = "en-US";
+    var baseLen = 0;
+    recog.onstart = function(){ if(activeField){ baseLen = activeField.value.length; } };
+    recog.onresult = function(e){
+      var fin = "", interim = "";
+      for(var i=e.resultIndex; i<e.results.length; i++){
+        var t = e.results[i][0].transcript;
+        if(e.results[i].isFinal) fin += t; else interim += t;
+      }
+      if(activeField && fin){
+        var v = activeField.value;
+        if(v && !/\s$/.test(v)) v += " ";
+        activeField.value = v + fin.trim() + " ";
+        activeField.dispatchEvent(new Event("input"));
+      }
+    };
+    recog.onerror = function(ev){
+      if(ev.error === "not-allowed" || ev.error === "service-not-allowed"){
+        toast("Microphone permission was blocked");
+        recognizing = false; renderMicStates();
+      }
+    };
+    recog.onend = function(){
+      if(recognizing){ try{ recog.start(); }catch(e){} } // browsers auto-stop on silence
+      else renderMicStates();
+    };
+  }
+  if(hasSR) setupRecog();
+
+  function toggleMic(field, btn){
+    if(!hasSR){ toast("Voice input isn't supported here — typing works fine"); return; }
+    if(recognizing && activeField === field){
+      recognizing = false;
+      try{ recog.stop(); }catch(e){}
+      renderMicStates();
+      return;
+    }
+    // switching fields or starting fresh
+    recognizing = false;
+    try{ recog.stop(); }catch(e){}
+    activeField = field;
+    recognizing = true;
+    setTimeout(function(){ try{ recog.start(); }catch(e){} renderMicStates(); }, 120);
+  }
+
+  function renderMicStates(){
+    var mics = spread.querySelectorAll(".mic");
+    mics.forEach(function(m){
+      var on = recognizing && m._field === activeField;
+      m.classList.toggle("live", on);
+      var lbl = m.querySelector(".mlabel");
+      if(lbl) lbl.textContent = on ? "Listening… tap to stop" : "Speak";
+    });
+  }
+
+  // ---------- AI follow-up ----------
+  function svgPlay(){ return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg>'; }
+
+  async function requestFollowup(qIndex, basedOnQ, basedOnA){
+    var prompt =
+      "You are the host of a thoughtful art-and-design podcast, in the spirit of Design Matters, interviewing Anthony \u2014 a visual collage artist (halftone, fragmentation, typographic collage) and product designer \u2014 about Slowfeed, his generative print-zine platform.\n\n" +
+      "He was asked:\n\"" + basedOnQ + "\"\n\n" +
+      "He answered:\n\"" + (basedOnA || "(no answer yet)") + "\"\n\n" +
+      "Ask exactly ONE follow-up question that digs into the most specific, surprising, or unresolved thing he just said. Be genuinely curious and conversational, 1\u20132 sentences. If his answer is thin or empty, ask a warm question that invites him to open up on the same theme. " +
+      "Return ONLY the question text \u2014 no preamble, no quotation marks, no label.";
+    var resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:1000,
+        messages:[{role:"user", content:prompt}]
+      })
+    });
+    var data = await resp.json();
+    var text = (data.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join(" ").trim();
+    text = text.replace(/^["\u201C]+|["\u201D]+$/g,"").trim();
+    if(!text) throw new Error("empty");
+    return text;
+  }
+
+  // ---------- render ----------
+  function render(){
+    var i = state.current;
+    var q = QUESTIONS[i];
+    var html = "";
+    html += '<div class="meta"><span class="seg">'+esc(q.segNo)+' · '+esc(q.seg)+'</span>'
+          + '<span class="count">Q.'+n2(i)+' / 10</span></div>';
+    html += '<div class="qrow">'
+          + '<div class="qnum" data-n="'+n2(i)+'">'+n2(i)+'</div>'
+          + '<p class="question">'+esc(q.text)+'</p></div>';
+
+    // cassette
+    html += '<div class="deck" id="deck">'
+          + '<button class="play" id="playQ" aria-label="Play this question aloud">'+svgPlay()+'</button>'
+          + '<div class="reels" aria-hidden="true"><span class="reel"></span><span class="reel"></span></div>'
+          + '<div class="tapeline" aria-hidden="true"></div>'
+          + '<div class="readout">Tape · Q'+n2(i)+'</div></div>';
+
+    // answer
+    html += '<div class="ans-label"><span>Your answer</span><span>'+(hasSR?"type or speak":"type your reply")+'</span></div>';
+    html += '<textarea id="answer" placeholder="Start talking, or type here…">'+esc(state.answers[i])+'</textarea>';
+    html += '<div class="ctrls">';
+    if(hasSR){
+      html += '<button class="mic" id="micMain"><span class="dot"></span><span class="mlabel">Speak</span></button>';
+    }
+    html += '<span class="hint">'+(hasSR?'Voice transcribes straight into the box.':'Voice input isn\u2019t available in this browser — typing works perfectly.')+'</span>';
+    html += '</div>';
+
+    // existing follow-ups
+    var fl = state.follows[i];
+    for(var k=0;k<fl.length;k++){
+      html += '<div class="follow" data-fk="'+k+'">'
+            + '<div class="ftag">Follow-up '+(k+1)+'</div>'
+            + '<p class="fq">'+esc(fl[k].q)+'</p>'
+            + '<button class="fplay" data-fplay="'+k+'">'+svgPlay()+' Play</button>'
+            + '<textarea class="fans" data-fa="'+k+'" placeholder="Your answer…">'+esc(fl[k].a)+'</textarea>';
+      if(hasSR){
+        html += '<div class="ctrls"><button class="mic" data-fmic="'+k+'"><span class="dot"></span><span class="mlabel">Speak</span></button></div>';
+      }
+      html += '</div>';
+    }
+
+    html += '<button class="followbtn" id="followBtn">+ Ask me a follow-up</button>';
+
+    spread.innerHTML = html;
+    bindSpread();
+    renderRail();
+    navMid.textContent = q.seg.toUpperCase();
+    prevBtn.disabled = (i===0);
+    nextBtn.disabled = (i===QUESTIONS.length-1);
+    renderMicStates();
+  }
+
+  function bindSpread(){
+    var i = state.current;
+    var deck = document.getElementById("deck");
+
+    document.getElementById("playQ").addEventListener("click", function(){
+      speak(QUESTIONS[i].text, deck);
+    });
+
+    var ta = document.getElementById("answer");
+    ta.addEventListener("input", function(){ state.answers[i] = ta.value; });
+
+    var micMain = document.getElementById("micMain");
+    if(micMain){ micMain._field = ta; micMain.addEventListener("click", function(){ toggleMic(ta, micMain); }); }
+
+    // follow-up textareas + mics + play
+    spread.querySelectorAll(".fans").forEach(function(fa){
+      var k = +fa.getAttribute("data-fa");
+      fa.addEventListener("input", function(){ state.follows[i][k].a = fa.value; });
+    });
+    spread.querySelectorAll("[data-fmic]").forEach(function(btn){
+      var k = +btn.getAttribute("data-fmic");
+      var fa = spread.querySelector('.fans[data-fa="'+k+'"]');
+      btn._field = fa;
+      btn.addEventListener("click", function(){ toggleMic(fa, btn); });
+    });
+    spread.querySelectorAll("[data-fplay]").forEach(function(btn){
+      var k = +btn.getAttribute("data-fplay");
+      btn.addEventListener("click", function(){ speak(state.follows[i][k].q, deck); });
+    });
+
+    document.getElementById("followBtn").addEventListener("click", onFollow);
+  }
+
+  async function onFollow(){
+    var i = state.current;
+    var btn = document.getElementById("followBtn");
+    var ans = state.answers[i].trim();
+    // build thinking row
+    var think = document.createElement("div");
+    think.className = "thinking";
+    think.innerHTML = '<span class="tt"></span> The host is thinking of a follow-up…';
+    btn.parentNode.insertBefore(think, btn);
+    btn.disabled = true;
+    try{
+      var q = await requestFollowup(i, QUESTIONS[i].text, ans);
+      state.follows[i].push({q:q, a:""});
+      render();
+      // auto-play the new follow-up question
+      var deck = document.getElementById("deck");
+      speak(q, deck);
+    }catch(e){
+      think.remove();
+      btn.disabled = false;
+      toast("Couldn't reach the host — try again");
+    }
+  }
+
+  function renderRail(){
+    var html = "";
+    for(var j=0;j<QUESTIONS.length;j++){
+      var cls = "";
+      if(j===state.current) cls="here";
+      else if(state.answers[j].trim()) cls="done";
+      html += '<span class="'+cls+'"></span>';
+    }
+    rail.innerHTML = html;
+  }
+
+  // ---------- nav ----------
+  function go(delta){
+    stopAll();
+    var n = state.current + delta;
+    if(n<0||n>=QUESTIONS.length) return;
+    state.current = n;
+    render();
+    window.scrollTo({top:0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto":"smooth"});
+  }
+  function jump(idx){
+    stopAll();
+    state.current = idx;
+    render();
+    closeScrim(document.getElementById("indexScrim"));
+    window.scrollTo({top:0, behavior:"auto"});
+  }
+  function stopAll(){
+    if(hasTTS) window.speechSynthesis.cancel();
+    if(recognizing){ recognizing=false; try{recog.stop();}catch(e){} }
+  }
+  prevBtn.addEventListener("click", function(){ go(-1); });
+  nextBtn.addEventListener("click", function(){ go(1); });
+
+  document.addEventListener("keydown", function(e){
+    if(e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
+    if(e.key==="ArrowRight") go(1);
+    if(e.key==="ArrowLeft") go(-1);
+  });
+
+  // ---------- index ----------
+  var indexScrim = document.getElementById("indexScrim");
+  function buildIndex(){
+    var list = document.getElementById("indexList");
+    var html = ""; var lastSeg = null;
+    for(var j=0;j<QUESTIONS.length;j++){
+      var q = QUESTIONS[j];
+      if(q.seg!==lastSeg){ html += '<div class="idxseg">'+esc(q.segNo)+' · '+esc(q.seg)+'</div>'; lastSeg=q.seg; }
+      var done = state.answers[j].trim() ? "full":"";
+      html += '<button class="idxq" data-jump="'+j+'">'
+            + '<span class="mark '+done+'"></span>'
+            + '<span class="idxn">'+n2(j)+'</span>'
+            + '<span class="idxtext">'+esc(q.text)+'</span></button>';
+    }
+    list.innerHTML = html;
+    list.querySelectorAll("[data-jump]").forEach(function(b){
+      b.addEventListener("click", function(){ jump(+b.getAttribute("data-jump")); });
+    });
+  }
+  function openScrim(el){ el.classList.add("open"); }
+  function closeScrim(el){ el.classList.remove("open"); }
+  document.getElementById("indexBtn").addEventListener("click", function(){ buildIndex(); openScrim(indexScrim); });
+
+  // ---------- voice ----------
+  var voiceScrim = document.getElementById("voiceScrim");
+  document.getElementById("voiceBtn").addEventListener("click", function(){ loadVoices(); openScrim(voiceScrim); });
+  var voiceSelect = document.getElementById("voiceSelect");
+  if(voiceSelect){
+    voiceSelect.addEventListener("change", function(){
+      var found = voices.filter(function(v){ return (v.name+"|"+v.lang) === voiceSelect.value; })[0];
+      if(found){ chosenVoice = found; userPickedVoice = true; }
+    });
+  }
+  var rate = document.getElementById("rate");
+  if(rate){
+    rate.addEventListener("input", function(){
+      ttsRate = rate.value/100;
+      document.getElementById("rateVal").textContent = ttsRate.toFixed(2) + "×";
+    });
+  }
+  var previewVoice = document.getElementById("previewVoice");
+  if(previewVoice){
+    previewVoice.addEventListener("click", function(){
+      speak("So \u2014 for someone who's never seen it, what is Slowfeed, and what does it put in someone's hands?", null);
+    });
+  }
+  if(!hasTTS){ document.getElementById("voiceBtn").style.display = "none"; }
+
+  // ---------- export ----------
+  var exportScrim = document.getElementById("exportScrim");
+  function buildMarkdown(){
+    var out = "# Solopolos\n\n*Slowfeed in conversation \u2014 a spoken interview about generative zines, collage, and slow media.*\n\n";
+    for(var j=0;j<QUESTIONS.length;j++){
+      var q = QUESTIONS[j];
+      out += "---\n\n";
+      out += "**["+q.segNo+" · "+q.seg+"]**\n\n";
+      out += "**Q"+n2(j)+". "+q.text+"**\n\n";
+      out += (state.answers[j].trim() ? state.answers[j].trim() : "_(no answer yet)_") + "\n\n";
+      var fl = state.follows[j];
+      for(var k=0;k<fl.length;k++){
+        out += "> **Follow-up:** "+fl[k].q+"\n>\n";
+        out += "> "+(fl[k].a.trim()? fl[k].a.trim().replace(/\n/g,"\n> ") : "_(no answer yet)_")+"\n\n";
+      }
+    }
+    return out.trim()+"\n";
+  }
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    document.getElementById("exportText").value = buildMarkdown();
+    openScrim(exportScrim);
+  });
+  document.getElementById("downloadMd").addEventListener("click", function(){
+    try{
+      var blob = new Blob([buildMarkdown()], {type:"text/markdown"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "solopolos-interview.md";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      toast("Downloaded solopolos-interview.md");
+    }catch(e){ toast("Download blocked — select the text and copy"); }
+  });
+  document.getElementById("copyMd").addEventListener("click", function(){
+    var box = document.getElementById("exportText");
+    box.removeAttribute("readonly"); box.select(); box.setSelectionRange(0, box.value.length);
+    var ok=false;
+    try{ ok = document.execCommand("copy"); }catch(e){}
+    box.setAttribute("readonly","");
+    if(ok) toast("Copied to clipboard");
+    else if(navigator.clipboard){ navigator.clipboard.writeText(box.value).then(function(){toast("Copied to clipboard");},function(){toast("Select the text to copy");}); }
+    else toast("Select the text to copy");
+  });
+
+  // generic scrim close
+  document.querySelectorAll("[data-close]").forEach(function(b){
+    b.addEventListener("click", function(){ closeScrim(b.closest(".scrim")); });
+  });
+  document.querySelectorAll(".scrim").forEach(function(s){
+    s.addEventListener("click", function(e){ if(e.target===s) closeScrim(s); });
+  });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"){ document.querySelectorAll(".scrim.open").forEach(closeScrim); } });
+
+  // ---------- go ----------
+  render();
+})();
+</script>
+</body>
+</html>
