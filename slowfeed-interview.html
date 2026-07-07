@@ -544,24 +544,17 @@
   function svgPlay(){ return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg>'; }
 
   async function requestFollowup(qIndex, basedOnQ, basedOnA){
-    var prompt =
-      "You are the host of a thoughtful art-and-design podcast, in the spirit of Design Matters, interviewing Anthony \u2014 a visual collage artist (halftone, fragmentation, typographic collage) and product designer \u2014 about Slowfeed, his generative print-zine platform.\n\n" +
-      "He was asked:\n\"" + basedOnQ + "\"\n\n" +
-      "He answered:\n\"" + (basedOnA || "(no answer yet)") + "\"\n\n" +
-      "Ask exactly ONE follow-up question that digs into the most specific, surprising, or unresolved thing he just said. Be genuinely curious and conversational, 1\u20132 sentences. If his answer is thin or empty, ask a warm question that invites him to open up on the same theme. " +
-      "Return ONLY the question text \u2014 no preamble, no quotation marks, no label.";
-    var resp = await fetch("https://api.anthropic.com/v1/messages", {
+    var resp = await fetch("/api/followup", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
-        model:"claude-sonnet-4-6",
-        max_tokens:1000,
-        messages:[{role:"user", content:prompt}]
-      })
+      body: JSON.stringify({ question: basedOnQ, answer: basedOnA })
     });
-    var data = await resp.json();
-    var text = (data.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join(" ").trim();
-    text = text.replace(/^["\u201C]+|["\u201D]+$/g,"").trim();
+    var data = {};
+    try{ data = await resp.json(); }catch(e){}
+    if(!resp.ok){
+      throw new Error((data && data.error) || ("Request failed: " + resp.status));
+    }
+    var text = ((data && data.question) || "").trim();
     if(!text) throw new Error("empty");
     return text;
   }
